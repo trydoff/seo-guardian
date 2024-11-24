@@ -1,12 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Code, Download, Share2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Code, Download } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import * as htmlToImage from "html-to-image";
+import ShareDialog from "@/components/ShareDialog";
 
 const Report = () => {
   const location = useLocation();
@@ -99,25 +99,6 @@ const Report = () => {
     }
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'SEO Report',
-          text: `SEO Report for ${url}`,
-          url: window.location.href,
-        });
-        toast.success("Report shared successfully!");
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          toast.error("Failed to share report");
-        }
-      }
-    } else {
-      toast.error("Sharing is not supported on this device");
-    }
-  };
-
   if (!report) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -144,15 +125,7 @@ const Report = () => {
             </button>
             
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                onClick={handleShare}
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </Button>
+              <ShareDialog url={url} score={report.score} />
               <Button
                 variant="outline"
                 size="sm"
