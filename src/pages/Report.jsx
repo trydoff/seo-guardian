@@ -1,13 +1,18 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Code } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Code, Download, Share2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import * as htmlToImage from "html-to-image";
 
 const Report = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [report, setReport] = useState(null);
+  const reportRef = useRef(null);
   const url = location.state?.url;
 
   useEffect(() => {
@@ -81,6 +86,38 @@ const Report = () => {
     setReport(mockReport);
   }, [url, navigate]);
 
+  const handleDownload = async () => {
+    try {
+      const dataUrl = await htmlToImage.toPng(reportRef.current);
+      const link = document.createElement('a');
+      link.download = 'seo-report.png';
+      link.href = dataUrl;
+      link.click();
+      toast.success("Report downloaded successfully!");
+    } catch (err) {
+      toast.error("Failed to download report");
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'SEO Report',
+          text: `SEO Report for ${url}`,
+          url: window.location.href,
+        });
+        toast.success("Report shared successfully!");
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          toast.error("Failed to share report");
+        }
+      }
+    } else {
+      toast.error("Sharing is not supported on this device");
+    }
+  };
+
   if (!report) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -97,85 +134,110 @@ const Report = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <button
-            onClick={() => navigate("/")}
-            className="button-hover flex items-center gap-2 text-slate-600 mb-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Analysis
-          </button>
-
-          <div className="glass-panel rounded-2xl p-8 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-slate-900">SEO Analysis Report</h1>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Overall Score:</span>
-                <span className="text-2xl font-bold text-slate-900">{report.score}</span>
-              </div>
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => navigate("/")}
+              className="button-hover flex items-center gap-2 text-slate-600"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Analysis
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={handleDownload}
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
             </div>
-
-            <div className="text-sm text-slate-500 break-all">{report.url}</div>
           </div>
 
-          <div className="space-y-6">
-            {report.sections.map((section, index) => (
-              <motion.div
-                key={section.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="glass-panel rounded-2xl p-6"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  {section.status === "success" && (
-                    <CheckCircle className="h-5 w-5 text-success" />
-                  )}
-                  {section.status === "warning" && (
-                    <AlertCircle className="h-5 w-5 text-warning" />
-                  )}
-                  {section.status === "error" && (
-                    <XCircle className="h-5 w-5 text-error" />
-                  )}
-                  <h2 className="text-lg font-semibold text-slate-900">{section.title}</h2>
+          <div ref={reportRef}>
+            <div className="glass-panel rounded-2xl p-8 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-slate-900">SEO Analysis Report</h1>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500">Overall Score:</span>
+                  <span className="text-2xl font-bold text-slate-900">{report.score}</span>
                 </div>
+              </div>
 
-                <div className="space-y-4">
-                  {section.items.map((item) => (
-                    <div
-                      key={item.name}
-                      className="flex flex-col gap-3 p-4 rounded-xl bg-slate-50"
-                    >
-                      <div className="flex items-start gap-3">
-                        {item.status === "success" && (
-                          <CheckCircle className="h-5 w-5 text-success mt-0.5" />
-                        )}
-                        {item.status === "warning" && (
-                          <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
-                        )}
-                        {item.status === "error" && (
-                          <XCircle className="h-5 w-5 text-error mt-0.5" />
-                        )}
-                        <div>
-                          <div className="font-medium text-slate-900">{item.name}</div>
-                          <div className="text-sm text-slate-500">{item.message}</div>
+              <div className="text-sm text-slate-500 break-all">{report.url}</div>
+            </div>
+
+            <div className="space-y-6">
+              {report.sections.map((section, index) => (
+                <motion.div
+                  key={section.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="glass-panel rounded-2xl p-6"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    {section.status === "success" && (
+                      <CheckCircle className="h-5 w-5 text-success" />
+                    )}
+                    {section.status === "warning" && (
+                      <AlertCircle className="h-5 w-5 text-warning" />
+                    )}
+                    {section.status === "error" && (
+                      <XCircle className="h-5 w-5 text-error" />
+                    )}
+                    <h2 className="text-lg font-semibold text-slate-900">{section.title}</h2>
+                  </div>
+
+                  <div className="space-y-4">
+                    {section.items.map((item) => (
+                      <div
+                        key={item.name}
+                        className="flex flex-col gap-3 p-4 rounded-xl bg-slate-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          {item.status === "success" && (
+                            <CheckCircle className="h-5 w-5 text-success mt-0.5" />
+                          )}
+                          {item.status === "warning" && (
+                            <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
+                          )}
+                          {item.status === "error" && (
+                            <XCircle className="h-5 w-5 text-error mt-0.5" />
+                          )}
+                          <div>
+                            <div className="font-medium text-slate-900">{item.name}</div>
+                            <div className="text-sm text-slate-500">{item.message}</div>
+                          </div>
                         </div>
+                        
+                        {(item.status === "warning" || item.status === "error") && (
+                          <Alert className="bg-slate-100 border-slate-200">
+                            <Code className="h-4 w-4" />
+                            <AlertDescription>
+                              <pre className="mt-2 whitespace-pre-wrap text-sm font-mono text-slate-700">
+                                {item.fix}
+                              </pre>
+                            </AlertDescription>
+                          </Alert>
+                        )}
                       </div>
-                      
-                      {(item.status === "warning" || item.status === "error") && (
-                        <Alert className="bg-slate-100 border-slate-200">
-                          <Code className="h-4 w-4" />
-                          <AlertDescription>
-                            <pre className="mt-2 whitespace-pre-wrap text-sm font-mono text-slate-700">
-                              {item.fix}
-                            </pre>
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            ))}
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </motion.div>
       </div>
